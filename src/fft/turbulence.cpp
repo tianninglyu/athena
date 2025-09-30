@@ -340,6 +340,7 @@ void TurbulenceDriver::PowerSpectrum(std::complex<Real> *amp) {
               pcoeff = 0.0;
             }
           }
+        }
         std::int64_t kidx=pfb->GetIndex(i,j,k,idx);
 
         if (global_ps_) {
