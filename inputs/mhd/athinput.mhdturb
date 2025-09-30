@@ -1,0 +1,70 @@
+<comment>
+problem   = Driven MHD turbulence 
+reference =
+configure = --prob=mhdturb -fft
+
+<job>
+problem_id = mhdturb
+
+<time>
+cfl_number = 0.3
+nlim       = 200000
+tlim       = 2.0
+integrator = vl2
+xorder     = 2
+ncycle_out = 50
+
+<mesh>
+nx1    = 64
+x1min  = -0.5
+x1max  = 0.5
+ix1_bc = periodic
+ox1_bc = periodic
+
+nx2    = 64
+x2min  = -0.5
+x2max  = 0.5
+ix2_bc = periodic
+ox2_bc = periodic
+
+nx3    = 64
+x3min  = -0.5
+x3max  = 0.5
+ix3_bc = periodic
+ox3_bc = periodic
+
+<meshblock>
+nx1 = 32
+nx2 = 32
+nx3 = 32
+
+<hydro>
+gamma = 1.6666666666667
+
+<problem>
+density = 1.0
+pressure = 0.625
+vx = 0.0
+vy = 0.0
+vz = 0.0
+bx = 0.1
+by = 0.0
+bz = 0.0
+
+<turbulence>
+turb_flag = 3
+nlow      = 1
+nhigh     = 16
+expo      = 2.0
+dedt      = 0.1
+tcorr     = 0.5
+
+<output1>
+file_type = hst
+dt        = 0.02
+
+<output2>
+file_type = vtk
+variable  = prim
+dt        = 0.2
+
