@@ -51,7 +51,10 @@ TurbulenceDriver::TurbulenceDriver(Mesh *pm, ParameterInput *pin) :
     // correlation time scales for OU smoothing:
     tcorr(pm->turb_flag > 1 ? pin->GetReal("turbulence", "tcorr") : 0.0),
     f_shear(pin->GetOrAddReal("turbulence", "f_shear", -1)), // ratio of shear component
-    expo(pin->GetOrAddReal("turbulence", "expo", 2)), // power-law exponent
+    // Choose turbulence driving power spectrum (power-law or parabolic):
+    mode(pin->GetOrAddString("turbulence", "mode", "powerlaw")),
+    // Initialize expo based on mode
+    expo(mode == "powerlaw" ? pin->GetOrAddReal("turbulence", "expo", 2.0) : 0.0),
     dedt(pin->GetReal("turbulence", "dedt")), // turbulence amplitude
     // TODO(changgoo): this assumes 3D and should not work with 1D, 2D. Add check.
     vel{ {nmb, pm->my_blocks(0)->ncells3,
@@ -66,6 +69,16 @@ TurbulenceDriver::TurbulenceDriver(Mesh *pm, ParameterInput *pin) :
     msg << "### FATAL ERROR in TurbulenceDriver::TurbulenceDriver" << std::endl
         << "The ratio between shear and compressible components should be less than one"
         << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
+
+  // Validate turbulence mode
+  if (mode != "powerlaw" && mode != "parabolic") {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in TurbulenceDriver::TurbulenceDriver" << std::endl
+        << "turbulence/mode = " << mode << " is not supported!" << std::endl
+        << "Supported modes: 'powerlaw' or 'parabolic'" << std::endl;
     ATHENA_ERROR(msg);
     return;
   }
@@ -287,12 +300,14 @@ void TurbulenceDriver::PowerSpectrum(std::complex<Real> *amp) {
     }
   }
 
-  // set power spectrum: only power-law
+  // set power spectrum: power-law or parabolic
 
   // find the reference 2PI/L along the longest axis
   Real dkx = pfb->dkx[0];
   if (knx2>1) dkx = dkx < pfb->dkx[1] ? dkx : pfb->dkx[1];
   if (knx3>2) dkx = dkx < pfb->dkx[2] ? dkx : pfb->dkx[2];
+
+  Real nmid = 0.5*(nlow+nhigh);
 
   for (int k=0; k<knx3; k++) {
     for (int j=0; j<knx2; j++) {
@@ -311,12 +326,20 @@ void TurbulenceDriver::PowerSpectrum(std::complex<Real> *amp) {
         if (gidx == 0) {
           pcoeff = 0.0;
         } else {
-          if ((kmag/dkx > nlow) && (kmag/dkx < nhigh)) {
-            pcoeff = 1.0/std::pow(kmag,(expo+2.0)/2.0);
-          } else {
-            pcoeff = 0.0;
+          if (mode == "parabolic") {
+            if ((kmag/dkx > nlow) && (kmag/dkx < nhigh)) {
+              Real x = (nmag - nmid) / (0.5*(nhigh - nlow));
+              pcoeff = std::max(0.0, (1.0 - x*x));
+            } else {
+              pcoeff = 0.0;
+            }
+          } else if (mode == "powerlaw") {
+            if ((kmag/dkx > nlow) && (kmag/dkx < nhigh)) {
+              pcoeff = 1.0/std::pow(kmag,(expo+2.0)/2.0);
+            } else {
+              pcoeff = 0.0;
+            }
           }
-        }
         std::int64_t kidx=pfb->GetIndex(i,j,k,idx);
 
         if (global_ps_) {
