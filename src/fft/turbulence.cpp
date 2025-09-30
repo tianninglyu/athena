@@ -315,11 +315,11 @@ void TurbulenceDriver::PowerSpectrum(std::complex<Real> *amp) {
         std::int64_t nx = GetKcomp(i,pfb->kdisp[0],pfb->kNx[0]);
         std::int64_t ny = GetKcomp(j,pfb->kdisp[1],pfb->kNx[1]);
         std::int64_t nz = GetKcomp(k,pfb->kdisp[2],pfb->kNx[2]);
-        Real nmag = std::sqrt(nx*nx+ny*ny+nz*nz);
         Real kx = nx*pfb->dkx[0];
         Real ky = ny*pfb->dkx[1];
         Real kz = nz*pfb->dkx[2];
         Real kmag = std::sqrt(kx*kx+ky*ky+kz*kz);
+        Real kmode = kmag/dkx;
 
         std::int64_t gidx = pfb->GetGlobalIndex(i,j,k);
 
@@ -327,8 +327,8 @@ void TurbulenceDriver::PowerSpectrum(std::complex<Real> *amp) {
           pcoeff = 0.0;
         } else {
           if (mode == "parabolic") {
-            if ((kmag/dkx > nlow) && (kmag/dkx < nhigh)) {
-              Real x = (nmag - nmid) / (0.5*(nhigh - nlow));
+            if ((kmode > nlow) && (kmode < nhigh)) {
+              Real x = (kmode - nmid) / (0.5*(nhigh - nlow));
               pcoeff = std::max(0.0, (1.0 - x*x));
             } else {
               pcoeff = 0.0;
